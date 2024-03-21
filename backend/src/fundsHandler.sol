@@ -1,41 +1,60 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-/*@dev This contract allows investors to send cash, manager to withdraw it & 
-    send profits back to investers
-       Profits will be distributed as per investment */
+interface IERC20 {
+    function transferFrom(
+        address sender,
+        address recipient,
+        uint256 amount
+    ) external returns (bool);
+
+    function balanceOf(address account) external view returns (uint256);
+}
 
 contract Funds {
-    error notOwner();
-
+    IERC20 public usdcToken;
     address public owner;
     uint256 public balances;
     mapping(address => uint256) public investmentAmount;
 
-    constructor(address _owner) {
+    constructor(address _owner, address _usdcToken) {
         owner = _owner;
+        usdcToken = IERC20(_usdcToken);
     }
 
     modifier onlyOwner() {
-        require(msg.sender != address(0), "Address doesn't exist");
-        if (msg.sender != owner) {
-            revert notOwner();
-        }
+        require(msg.sender == owner, "Not owner");
         _;
     }
 
-    /* @dev owner withdraws cash sent by investors in order to invest
-     */
-    function withdrawFunds(uint256 amount) external onlyOwner {}
+    /*@ dev investors deposit*/
+    function deposit(uint256 amount) public {
+        require(amount >= 25000 * 10 ** 18, "Minimum deposit not met");
+        require(
+            usdcToken.balanceOf(msg.sender) >= amount,
+            "Insufficient balance"
+        );
+        investmentAmount[msg.sender] += amount;
+        balances += amount;
 
-    /* @dev owner sends investment proceeds to investors
-     */
-    function payInterestBasedOnInvestment() external onlyOwner {
-        //(investment amount/total cash) * Total profits
+        usdcToken.transferFrom(msg.sender, address(this), amount);
     }
 
-    //for receiving cash that's sent in this contract
+    /*@ dev fund managers withdraw*/
+    function withdrawFunds(uint256 amount) external onlyOwner {
+        require(amount <= balances, "Insufficient funds");
+        balances -= amount;
+        // withdrawal logic here
+    }
+
+    function payInterestBasedOnInvestment() external onlyOwner {
+        // profit distribution logic here
+    }
+
+    //@dev For receiving cash that's sent to this contract
     fallback() external payable {}
 
-    receive() external payable {}
+    receive() external payable {
+        revert("Contract does not accept ETH");
+    }
 }

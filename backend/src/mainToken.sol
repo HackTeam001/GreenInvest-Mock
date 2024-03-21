@@ -13,13 +13,15 @@ import "node_modules/@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.s
  */
 contract GreenInvest is ERC20, Ownable, ERC20Permit, ERC20Votes {
     constructor(
-        address initialOwner
+        address initialOwner,
+        uint256 _totalSupply
     )
         ERC20("GreenInvest", "GRN")
         Ownable(initialOwner)
         ERC20Permit("GreenInvest")
     {
-        _mint(msg.sender, 100000 * 10 ** decimals());
+        _mint(address(this), _totalSupply * 10 ** decimals());
+        _mint(initialOwner, 100000 * 10 ** decimals());
     }
 
     function mint(address to, uint256 amount) public onlyOwner {
