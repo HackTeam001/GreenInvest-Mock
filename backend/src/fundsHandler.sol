@@ -14,8 +14,8 @@ interface IERC20 {
 contract Funds {
     IERC20 public usdcToken;
     address public owner;
-    uint256 public balances;
-    mapping(address => uint256) public investmentAmount;
+    uint256 public s_balances;
+    mapping(address => uint256) public s_investmentAmount;
 
     constructor(address _owner, address _usdcToken) {
         owner = _owner;
@@ -34,16 +34,16 @@ contract Funds {
             usdcToken.balanceOf(msg.sender) >= amount,
             "Insufficient balance"
         );
-        investmentAmount[msg.sender] += amount;
-        balances += amount;
+        s_investmentAmount[msg.sender] += amount;
+        s_balances += amount;
 
         usdcToken.transferFrom(msg.sender, address(this), amount);
     }
 
     /*@ dev fund managers withdraw*/
     function withdrawFunds(uint256 amount) external onlyOwner {
-        require(amount <= balances, "Insufficient funds");
-        balances -= amount;
+        require(amount <= s_balances, "Insufficient funds");
+        s_balances -= amount;
         // withdrawal logic here
     }
 
