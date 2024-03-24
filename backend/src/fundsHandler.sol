@@ -1,6 +1,24 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+import "node_modules/@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "node_modules/@openzeppelin/contracts/token/ERC721/extensions/ERC721Burnable.sol";
+import "node_modules/@openzeppelin/contracts/access/Ownable.sol";
+
+contract MyNFT is ERC721, ERC721Burnable, Ownable {
+    constructor(
+        address initialOwner
+    ) ERC721("NFT_Token", "NTK") Ownable(initialOwner) {}
+
+    function safeMint(address to, uint256 tokenId) public onlyOwner {
+        _safeMint(to, tokenId);
+    }
+}
+
+interface NFT {
+    function safeMint(address to, uint256 tokenId) external;
+}
+
 interface IERC20 {
     function transferFrom(
         address sender,
@@ -13,9 +31,13 @@ interface IERC20 {
 
 contract Funds {
     IERC20 public usdcToken;
+    MyNFT public nft;
+    uint256 public tokenID;
     address public owner;
-    uint256 public s_balances;
+    address[] public s_investors;
+    bool isInvestor = false;
     mapping(address => uint256) public s_investmentAmount;
+    uint256 public s_balances;
 
     constructor(address _owner, address _usdcToken) {
         owner = _owner;
@@ -27,13 +49,25 @@ contract Funds {
         _;
     }
 
-    /*@ dev investors deposit*/
+    /*@ dev s_investors deposit, they get an NFT*/
     function deposit(uint256 amount) public {
         require(amount >= 25000 * 10 ** 18, "Minimum deposit not met");
         require(
             usdcToken.balanceOf(msg.sender) >= amount,
             "Insufficient balance"
         );
+        for (uint i = 0; i < s_investors.length; i++) {
+            if (msg.sender == s_investors[i]) {
+                isInvestor = true;
+                break;
+            }
+        }
+        if (!isInvestor) {
+            s_investors.push(msg.sender);
+            tokenID++;
+            nft.safeMint(msg.sender, tokenID);
+        }
+
         s_investmentAmount[msg.sender] += amount;
         s_balances += amount;
 
