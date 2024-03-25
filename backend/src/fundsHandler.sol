@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import "node_modules/@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "node_modules/@openzeppelin/contracts/token/ERC721/extensions/ERC721Burnable.sol";
 import "node_modules/@openzeppelin/contracts/access/Ownable.sol";
+import "node_modules/@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract MyNFT is ERC721, ERC721Burnable, Ownable {
     constructor(
@@ -19,17 +20,13 @@ interface NFT {
     function safeMint(address to, uint256 tokenId) external;
 }
 
-interface IERC20 {
-    function transferFrom(
-        address sender,
-        address recipient,
-        uint256 amount
-    ) external returns (bool);
-
-    function balanceOf(address account) external view returns (uint256);
-}
-
 contract Funds {
+    using SafeERC20 for IERC20;
+
+    event FundsDeposited(address investor, uint256 _amount);
+    event FundsWithdrawn(uint256 _amount);
+    event ProfitDistributed(address _investor, uint256 _profit);
+
     address public fundManager;
     IERC20 public usdcToken;
 
@@ -37,16 +34,22 @@ contract Funds {
     uint256 public tokenID;
 
     address[] public s_investors;
-    bool isInvestor = false;
+    mapping(address => bool) public isInvestor;
     mapping(address => uint256) public s_investmentAmount;
     uint256 public s_balances;
 
-    constructor(address _fundManager, address _usdcToken) {
+    constructor(
+        address _fundManager,
+        address _usdcToken,
+        address _nftContract
+    ) {
         fundManager = _fundManager;
         usdcToken = IERC20(_usdcToken);
+        nft = MyNFT(_nftContract);
     }
 
     modifier onlyfundManager() {
+        require(msg.sender != address(0), "Not fundManager");
         require(msg.sender == fundManager, "Not fundManager");
         _;
     }
@@ -58,33 +61,44 @@ contract Funds {
             usdcToken.balanceOf(msg.sender) >= amount,
             "Insufficient balance"
         );
-        for (uint i = 0; i < s_investors.length; i++) {
-            if (msg.sender == s_investors[i]) {
-                isInvestor = true;
-                break;
-            }
-        }
-        if (!isInvestor) {
+
+        if (!isInvestor[msg.sender]) {
             s_investors.push(msg.sender);
             tokenID++;
             nft.safeMint(msg.sender, tokenID);
+            isInvestor[msg.sender] = true;
         }
 
+        emit FundsDeposited(msg.sender, amount);
         s_investmentAmount[msg.sender] += amount;
         s_balances += amount;
-
-        usdcToken.transferFrom(msg.sender, address(this), amount);
+        usdcToken.safeTransferFrom(msg.sender, address(this), amount);
     }
 
     /*@ dev fund managers withdraw*/
     function withdrawFunds(uint256 amount) external onlyfundManager {
         require(amount <= s_balances, "Insufficient funds");
+
+        emit FundsWithdrawn(amount);
         s_balances -= amount;
-        // withdrawal logic here
+        usdcToken.safeTransfer(msg.sender, amount);
     }
 
-    function payInterestBasedOnInvestment() external onlyfundManager {
-        // profit distribution logic here
+    function payInterestBasedOnInvestment(
+        uint256 amount
+    ) external onlyfundManager {
+        require(amount <= s_balances, "Insufficient funds");
+
+        for (uint256 i = 0; i < s_investors.length; i++) {
+            address investor = s_investors[i];
+            uint256 totalAmountInvested = s_investmentAmount[investor];
+            uint256 profit = (totalAmountInvested * amount) / s_balances;
+
+            emit ProfitDistributed(investor, profit);
+            s_balances -= profit;
+            s_investmentAmount[investor] -= profit;
+            usdcToken.safeTransfer(investor, profit);
+        }
     }
 
     //@dev For receiving cash that's sent to this contract
