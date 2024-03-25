@@ -7,8 +7,8 @@ import "node_modules/@openzeppelin/contracts/access/Ownable.sol";
 
 contract MyNFT is ERC721, ERC721Burnable, Ownable {
     constructor(
-        address initialOwner
-    ) ERC721("NFT_Token", "NTK") Ownable(initialOwner) {}
+        address initialfundManager
+    ) ERC721("NFT_Token", "NTK") Ownable(initialfundManager) {}
 
     function safeMint(address to, uint256 tokenId) public onlyOwner {
         _safeMint(to, tokenId);
@@ -30,22 +30,24 @@ interface IERC20 {
 }
 
 contract Funds {
+    address public fundManager;
     IERC20 public usdcToken;
+
     MyNFT public nft;
     uint256 public tokenID;
-    address public owner;
+
     address[] public s_investors;
     bool isInvestor = false;
     mapping(address => uint256) public s_investmentAmount;
     uint256 public s_balances;
 
-    constructor(address _owner, address _usdcToken) {
-        owner = _owner;
+    constructor(address _fundManager, address _usdcToken) {
+        fundManager = _fundManager;
         usdcToken = IERC20(_usdcToken);
     }
 
-    modifier onlyOwner() {
-        require(msg.sender == owner, "Not owner");
+    modifier onlyfundManager() {
+        require(msg.sender == fundManager, "Not fundManager");
         _;
     }
 
@@ -75,13 +77,13 @@ contract Funds {
     }
 
     /*@ dev fund managers withdraw*/
-    function withdrawFunds(uint256 amount) external onlyOwner {
+    function withdrawFunds(uint256 amount) external onlyfundManager {
         require(amount <= s_balances, "Insufficient funds");
         s_balances -= amount;
         // withdrawal logic here
     }
 
-    function payInterestBasedOnInvestment() external onlyOwner {
+    function payInterestBasedOnInvestment() external onlyfundManager {
         // profit distribution logic here
     }
 
