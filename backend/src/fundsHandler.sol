@@ -11,31 +11,33 @@ contract MyNFT is ERC721, ERC721Burnable, Ownable {
         address initialfundManager
     ) ERC721("NFT_Token", "NTK") Ownable(initialfundManager) {}
 
-    function safeMint(address to, uint256 tokenId) public onlyOwner {
-        _safeMint(to, tokenId);
+    function safeMint(address to, uint256 nftTokenId) public onlyOwner {
+        _safeMint(to, nftTokenId);
     }
 }
 
 interface NFT {
-    function safeMint(address to, uint256 tokenId) external;
+    function safeMint(address to, uint256 nfTokenId) external;
 }
 
 contract Funds {
     using SafeERC20 for IERC20;
 
-    event FundsDeposited(address investor, uint256 _amount);
-    event FundsWithdrawn(uint256 _amount);
-    event ProfitDistributed(address _investor, uint256 _profit);
+    event FundsDeposited(address indexed investor, uint256 indexed _amount);
+    event FundsWithdrawn(uint256 indexed _amount);
+    event ProfitDistributed(address indexed _investor, uint256 indexed _profit);
 
     address public fundManager;
     IERC20 public usdcToken;
 
     MyNFT public nft;
-    uint256 public tokenID;
+    uint256 public nft_tokenID;
 
     address[] public s_investors;
-    mapping(address => bool) public isInvestor;
+    uint256 constant MINIMUM_INVESTMENT_AMOUNT = 25000 * 1e18; //$25k
+    mapping(address => bool) public s_isInvestor;
     mapping(address => uint256) public s_investmentAmount;
+
     uint256 public s_balances;
 
     constructor(
@@ -48,25 +50,30 @@ contract Funds {
         nft = MyNFT(_nftContract);
     }
 
+    //action taken by only the fund manager
     modifier onlyfundManager() {
         require(msg.sender != address(0), "Not fundManager");
         require(msg.sender == fundManager, "Not fundManager");
         _;
     }
 
-    /*@ dev s_investors deposit, they get an NFT*/
+    /*@ dev s_investors deposit for the first time, 
+    they have a minimal amount to deposit + they get an NFT*/
     function deposit(uint256 amount) public {
-        require(amount >= 25000 * 10 ** 18, "Minimum deposit not met");
         require(
             usdcToken.balanceOf(msg.sender) >= amount,
             "Insufficient balance"
         );
 
-        if (!isInvestor[msg.sender]) {
+        if (!s_isInvestor[msg.sender]) {
+            require(
+                amount >= MINIMUM_INVESTMENT_AMOUNT,
+                "Minimum deposit not met"
+            );
             s_investors.push(msg.sender);
-            tokenID++;
-            nft.safeMint(msg.sender, tokenID);
-            isInvestor[msg.sender] = true;
+            nft_tokenID++;
+            nft.safeMint(msg.sender, nft_tokenID);
+            s_isInvestor[msg.sender] = true;
         }
 
         emit FundsDeposited(msg.sender, amount);
