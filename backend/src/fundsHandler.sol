@@ -17,7 +17,7 @@ contract MyNFT is ERC721, ERC721Burnable, Ownable {
 }
 
 interface NFT {
-    function safeMint(address to, uint256 nfTokenId) external;
+    function safeMint(address to, uint256 nftTokenId) external;
 }
 
 contract Funds {
@@ -59,7 +59,7 @@ contract Funds {
 
     /*@ dev s_investors deposit for the first time, 
     they have a minimal amount to deposit + they get an NFT*/
-    function deposit(uint256 amount) public {
+    function deposit(uint256 amount) public payable {
         require(
             usdcToken.balanceOf(msg.sender) >= amount,
             "Insufficient balance"
@@ -83,7 +83,7 @@ contract Funds {
     }
 
     /*@ dev fund managers withdraw*/
-    function withdrawFunds(uint256 amount) external onlyfundManager {
+    function withdrawFunds(uint256 amount) external payable onlyfundManager {
         require(amount <= s_balances, "Insufficient funds");
 
         emit FundsWithdrawn(amount);
