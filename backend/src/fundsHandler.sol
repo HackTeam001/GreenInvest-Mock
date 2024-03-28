@@ -59,7 +59,8 @@ contract Funds {
 
     /*@ dev s_investors deposit for the first time, 
     they have a minimal amount to deposit + they get an NFT*/
-    function deposit(uint256 amount) public payable {
+    function deposit(IERC20 usdc, uint256 amount) public payable {
+        require(usdc == usdcToken, "Token not allowed");
         require(
             usdcToken.balanceOf(msg.sender) >= amount,
             "Insufficient balance"
@@ -79,7 +80,7 @@ contract Funds {
         emit FundsDeposited(msg.sender, amount);
         s_investmentAmount[msg.sender] += amount;
         s_balances += amount;
-        usdcToken.safeTransferFrom(msg.sender, address(this), amount);
+        usdc.safeTransferFrom(msg.sender, address(this), amount);
     }
 
     /*@ dev fund managers withdraw*/
