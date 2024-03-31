@@ -19,7 +19,7 @@ contract FundsScript is Script {
         vm.startBroadcast();
         MyNFT nft = new MyNFT(manager);
         Funds funds = new Funds(manager, address(usdcToken), address(nft));
-        funds.deposit(amount);
+        funds.deposit(usdcToken, amount);
         vm.stopBroadcast();
     }
 }
