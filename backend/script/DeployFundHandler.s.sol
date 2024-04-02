@@ -11,7 +11,7 @@ contract FundsScript is Script {
     function run() public {
         address manager = makeAddr("123");
         IERC20 usdcToken;
-        uint privateKey = vm.envUint("DEV_PRIVATE_KEY ");
+        uint256 privateKey = vm.envUint("DEV_PRIVATE_KEY ");
         address account = vm.addr(privateKey);
         console2.log("Account:", account);
         uint256 amount = 1e18;
