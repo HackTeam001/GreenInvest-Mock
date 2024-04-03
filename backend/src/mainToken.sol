@@ -21,11 +21,15 @@ contract GreenInvest is ERC20, Ownable, ERC20Permit, ERC20Votes {
         ERC20Permit("GreenInvest")
     {
         _mint(address(this), _totalSupply * 10 ** decimals());
-        _mint(initialOwner, 100000 * 10 ** decimals());
+        _mint(initialOwner, 1000000 * 10 ** decimals());
     }
 
     function mint(address to, uint256 amount) public onlyOwner {
         _mint(to, amount);
+    }
+
+    function balance() public view returns (uint256) {
+        return balanceOf(address(this));
     }
 
     // The following functions are overrides required by Solidity.

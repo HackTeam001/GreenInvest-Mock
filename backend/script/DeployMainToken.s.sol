@@ -12,7 +12,7 @@ contract GreenToken is Script {
         address owner = makeAddr("1");
         GreenInvest token;
 
-        uint256 privateKey = vm.envUint("DEV_PRIVATE_KEY");
+        uint256 privateKey = vm.envUint("DEV_PRIVATE_KEY ");
         address account = vm.addr(privateKey);
         console2.log("Account:", account);
 
