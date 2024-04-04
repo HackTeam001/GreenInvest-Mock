@@ -43,14 +43,9 @@ contract Funds is MyNFT {
     uint256 public s_balances;
 
     //@Dev IDK IF the constructor part of NFT is right. I added it bc I want investors to be able to use the burn function to burn their nft's. Is the implementetion correct?
-    constructor(
-        address _fundManager,
-        address _usdcToken,
-        address _nftContract
-    ) MyNFT(_fundManager) {
+    constructor(address _fundManager, address _usdcToken) MyNFT(_fundManager) {
         fundManager = _fundManager;
         usdcToken = IERC20(_usdcToken);
-        nft = MyNFT(_nftContract);
     }
 
     //action taken by only the fund manager
