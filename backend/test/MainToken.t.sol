@@ -3,7 +3,6 @@ pragma solidity ^0.8.20;
 
 import {Test, console2} from "forge-std/Test.sol";
 import {GreenInvest} from "../src/mainToken.sol";
-import "node_modules/@openzeppelin/contracts/access/Ownable.sol";
 
 contract MainTokenTest is Test {
     address public owner = makeAddr("1234");

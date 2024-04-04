@@ -6,6 +6,7 @@ import "node_modules/@openzeppelin/contracts/token/ERC721/extensions/ERC721Burna
 import "node_modules/@openzeppelin/contracts/access/Ownable.sol";
 import "node_modules/@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
+//Minted after initial investment. Investor can burn their nft at will
 contract MyNFT is ERC721, ERC721Burnable, Ownable {
     constructor(
         address initialfundManager
@@ -20,7 +21,7 @@ interface NFT {
     function safeMint(address to, uint256 nftTokenId) external;
 }
 
-contract Funds {
+contract Funds is MyNFT {
     using SafeERC20 for IERC20;
 
     event FundsDeposited(address indexed investor, uint256 indexed _amount);
@@ -37,14 +38,16 @@ contract Funds {
     uint256 constant MINIMUM_INVESTMENT_AMOUNT = 25000 * 1e18; //$25k
     mapping(address => bool) public s_isInvestor;
     mapping(address => uint256) public s_investmentAmount;
+    mapping(address => uint256) public s_investorToNFTTokenID;
 
     uint256 public s_balances;
 
+    //@Dev IDK IF the constructor part of NFT is right. I added it bc I want investors to be able to use the burn function to burn their nft's. Is the implementetion correct?
     constructor(
         address _fundManager,
         address _usdcToken,
         address _nftContract
-    ) {
+    ) MyNFT(_fundManager) {
         fundManager = _fundManager;
         usdcToken = IERC20(_usdcToken);
         nft = MyNFT(_nftContract);
@@ -73,6 +76,7 @@ contract Funds {
             );
             s_investors.push(msg.sender);
             nft_tokenID++;
+            s_investorToNFTTokenID[msg.sender] = nft_tokenID;
             nft.safeMint(msg.sender, nft_tokenID);
             s_isInvestor[msg.sender] = true;
         }
@@ -83,7 +87,26 @@ contract Funds {
         usdc.safeTransferFrom(msg.sender, address(this), amount);
     }
 
-    /*@ dev fund managers withdraw*/
+    // Check if the caller owns the token
+    function _isApprovedOwner(uint256 tokenId) public view returns (bool) {
+        require(s_isInvestor[msg.sender], "Only investors can burn their nft");
+        require(
+            s_investorToNFTTokenID[msg.sender] == tokenId,
+            "TokenID doesnt match"
+        );
+        return true;
+    }
+
+    function burnToken(uint256 tokenId) external {
+        // Check if the caller owns the token
+        require(
+            _isApprovedOwner(tokenId) == true,
+            "ERC721Burnable: caller is not owner"
+        );
+        _burn(tokenId);
+    }
+
+    /*@ dev Only fund managers can withdraw. Should add multisig functionality*/
     function withdrawFunds(uint256 amount) external payable onlyfundManager {
         require(amount <= s_balances, "Insufficient funds");
 
