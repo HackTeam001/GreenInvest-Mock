@@ -8,12 +8,12 @@ import "../script/DeployFundHandler.s.sol";
 contract CounterTest is Test {
     Funds public funds;
     IERC20 public usdcToken;
-    MyNFT public nft;
+    //MyNFT public nft;
 
     address public fundManager = makeAddr("123");
 
     function setUp() public {
-        nft = new MyNFT(fundManager);
-        funds = new Funds(fundManager, address(usdcToken), address(nft));
+        //nft = new MyNFT(fundManager);
+        funds = new Funds(fundManager, address(usdcToken));
     }
 }

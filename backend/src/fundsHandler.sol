@@ -27,6 +27,7 @@ contract Funds is MyNFT {
     event FundsDeposited(address indexed investor, uint256 indexed _amount);
     event FundsWithdrawn(uint256 indexed _amount);
     event ProfitDistributed(address indexed _investor, uint256 indexed _profit);
+    event NFTBurned(address indexed investor, uint256 indexed tokenId);
 
     address public fundManager;
     IERC20 public usdcToken;
@@ -98,6 +99,7 @@ contract Funds is MyNFT {
             _isApprovedOwner(tokenId) == true,
             "ERC721Burnable: caller is not owner"
         );
+        emit NFTBurned(msg.sender, tokenId);
         _burn(tokenId);
     }
 

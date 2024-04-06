@@ -17,8 +17,7 @@ contract FundsScript is Script {
         uint256 amount = 1e18;
 
         vm.startBroadcast();
-        MyNFT nft = new MyNFT(manager);
-        Funds funds = new Funds(manager, address(usdcToken), address(nft));
+        Funds funds = new Funds(manager, address(usdcToken));
         funds.deposit(usdcToken, amount);
         vm.stopBroadcast();
     }
