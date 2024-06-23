@@ -43,7 +43,6 @@ contract Funds is MyNFT {
 
     uint256 public s_balances;
 
-    //@Dev IDK IF the constructor part of NFT is right. I added it bc I want investors to be able to use the burn function to burn their nft's. Is the implementetion correct?
     constructor(address _fundManager, address _usdcToken) MyNFT(_fundManager) {
         fundManager = _fundManager;
         usdcToken = IERC20(_usdcToken);
@@ -64,23 +63,30 @@ contract Funds is MyNFT {
             usdcToken.balanceOf(msg.sender) >= amount,
             "Insufficient balance"
         );
-
+        //new investor
         if (!s_isInvestor[msg.sender]) {
             require(
                 amount >= MINIMUM_INVESTMENT_AMOUNT,
                 "Minimum deposit not met"
             );
+
+            emit FundsDeposited(msg.sender, amount);
             s_investors.push(msg.sender);
             nft_tokenID++;
             s_investorToNFTTokenID[msg.sender] = nft_tokenID;
             nft.safeMint(msg.sender, nft_tokenID);
             s_isInvestor[msg.sender] = true;
-        }
 
-        emit FundsDeposited(msg.sender, amount);
-        s_investmentAmount[msg.sender] += amount;
-        s_balances += amount;
-        usdc.safeTransferFrom(msg.sender, address(this), amount);
+            s_investmentAmount[msg.sender] += amount;
+            s_balances += amount;
+            usdc.safeTransferFrom(msg.sender, address(this), amount);
+        } else {
+            //returning investor
+            emit FundsDeposited(msg.sender, amount);
+            s_investmentAmount[msg.sender] += amount;
+            s_balances += amount;
+            usdc.safeTransferFrom(msg.sender, address(this), amount);
+        }
     }
 
     // Check if the caller owns the token
