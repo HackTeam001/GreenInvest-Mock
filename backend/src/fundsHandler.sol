@@ -12,6 +12,7 @@ contract MyNFT is ERC721, ERC721Burnable, Ownable {
         address initialfundManager
     ) ERC721("NFT_Token", "NTK") Ownable(initialfundManager) {}
 
+    //onlyOwner
     function safeMint(address to, uint256 nftTokenId) public onlyOwner {
         _safeMint(to, nftTokenId);
     }
@@ -36,7 +37,7 @@ contract Funds is MyNFT {
     uint256 public nft_tokenID;
 
     address[] public s_investors;
-    uint256 constant MINIMUM_INVESTMENT_AMOUNT = 25000 * 1e18; //$25k
+    uint256 constant MINIMUM_INVESTMENT_AMOUNT = 10e18;
     mapping(address => bool) public s_isInvestor;
     mapping(address => uint256) public s_investmentAmount;
     mapping(address => uint256) public s_investorToNFTTokenID;
@@ -46,6 +47,7 @@ contract Funds is MyNFT {
     constructor(address _fundManager, address _usdcToken) MyNFT(_fundManager) {
         fundManager = _fundManager;
         usdcToken = IERC20(_usdcToken);
+        nft = MyNFT(fundManager);
     }
 
     //action taken by only the fund manager
@@ -57,12 +59,14 @@ contract Funds is MyNFT {
 
     /*@ dev s_investors deposit for the first time, 
     they have a minimal amount to deposit + they get an NFT*/
-    function deposit(IERC20 usdc, uint256 amount) public payable {
+    function deposit(IERC20 usdc, address x, uint256 amount) public payable {
+        require(x == msg.sender, "Uknown caller");
         require(usdc == usdcToken, "Token not allowed");
         require(
             usdcToken.balanceOf(msg.sender) >= amount,
             "Insufficient balance"
         );
+
         //new investor
         if (!s_isInvestor[msg.sender]) {
             require(
@@ -71,13 +75,12 @@ contract Funds is MyNFT {
             );
 
             emit FundsDeposited(msg.sender, amount);
-            s_investors.push(msg.sender);
             nft_tokenID++;
-            s_investorToNFTTokenID[msg.sender] = nft_tokenID;
-            nft.safeMint(msg.sender, nft_tokenID);
-            s_isInvestor[msg.sender] = true;
+            s_investorToNFTTokenID[x] = nft_tokenID;
+            nft.safeMint(x, nft_tokenID);
+            s_isInvestor[x] = true;
 
-            s_investmentAmount[msg.sender] += amount;
+            s_investmentAmount[x] += amount;
             s_balances += amount;
             usdc.safeTransferFrom(msg.sender, address(this), amount);
         } else {
@@ -140,5 +143,13 @@ contract Funds is MyNFT {
 
     receive() external payable {
         revert("Contract does not accept ETH");
+    }
+
+    function checkInvestor(address x) external view returns (bool) {
+        return s_isInvestor[x];
+    }
+
+    function checkBalances() external view returns (uint256) {
+        return s_balances;
     }
 }
