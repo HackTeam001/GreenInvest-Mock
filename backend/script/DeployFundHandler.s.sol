@@ -11,14 +11,18 @@ contract FundsScript is Script {
     function run() public {
         address manager = makeAddr("123");
         IERC20 usdcToken;
-        uint256 privateKey = vm.envUint("DEV_PRIVATE_KEY ");
-        address account = vm.addr(privateKey);
-        console2.log("Account:", account);
+        MyNFT nft;
+        Funds funds;
+        // uint256 privateKey = vm.envUint("DEV_PRIVATE_KEY ");
+        // address account = vm.addr(privateKey);
+        //_boundconsole2.log("Account:", account);
         uint256 amount = 1e18;
 
         vm.startBroadcast();
-        Funds funds = new Funds(manager, address(usdcToken));
-        funds.deposit(usdcToken, amount);
+        nft = new MyNFT(manager); // Assuming MyNFT contract requires the same fund manager as Funds contract
+
+        funds = new Funds(manager, address(usdcToken));
+        funds.deposit(usdcToken, manager, amount);
         vm.stopBroadcast();
     }
 }
