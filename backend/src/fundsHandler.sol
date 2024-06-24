@@ -4,50 +4,45 @@ pragma solidity ^0.8.20;
 import "node_modules/@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "node_modules/@openzeppelin/contracts/token/ERC721/extensions/ERC721Burnable.sol";
 import "node_modules/@openzeppelin/contracts/access/Ownable.sol";
+
+import "node_modules/@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "node_modules/@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {GreenInvest} from "./mainToken.sol";
 
 //Minted after initial investment. Investor can burn their nft at will
-contract MyNFT is ERC721, ERC721Burnable, Ownable {
-    constructor(
-        address initialfundManager
-    ) ERC721("NFT_Token", "NTK") Ownable(initialfundManager) {}
 
-    //onlyOwner
-    function safeMint(address to, uint256 nftTokenId) public onlyOwner {
-        _safeMint(to, nftTokenId);
-    }
-}
-
-interface NFT {
-    function safeMint(address to, uint256 nftTokenId) external;
-}
-
-contract Funds is MyNFT {
+contract Funds {
     using SafeERC20 for IERC20;
+
+    event newInvestorDeposit(address indexed investor, uint256 indexed _amount);
 
     event FundsDeposited(address indexed investor, uint256 indexed _amount);
     event FundsWithdrawn(uint256 indexed _amount);
     event ProfitDistributed(address indexed _investor, uint256 indexed _profit);
-    event NFTBurned(address indexed investor, uint256 indexed tokenId);
+    event tokensBurned(address indexed investor, uint256 indexed tokenId);
 
     address public fundManager;
     IERC20 public usdcToken;
 
-    MyNFT public nft;
-    uint256 public nft_tokenID;
+    GreenInvest public greenTAddress;
+    uint256 public rate = 1000; // Number of tokens per Ether
 
     address[] public s_investors;
     uint256 constant MINIMUM_INVESTMENT_AMOUNT = 10e18;
     mapping(address => bool) public s_isInvestor;
     mapping(address => uint256) public s_investmentAmount;
-    mapping(address => uint256) public s_investorToNFTTokenID;
+    mapping(address => uint256) public s_investorToGreenTokens;
 
     uint256 public s_balances;
 
-    constructor(address _fundManager, address _usdcToken) MyNFT(_fundManager) {
+    constructor(
+        address _fundManager,
+        address _usdcToken,
+        address _tokenAddress
+    ) {
         fundManager = _fundManager;
         usdcToken = IERC20(_usdcToken);
-        nft = MyNFT(fundManager);
+        greenTAddress = GreenInvest(_tokenAddress);
     }
 
     //action taken by only the fund manager
@@ -58,9 +53,11 @@ contract Funds is MyNFT {
     }
 
     /*@ dev s_investors deposit for the first time, 
-    they have a minimal amount to deposit + they get an NFT*/
+    they have a minimal amount to deposit + they get some greenTokens depending on their investment amount */
     function deposit(IERC20 usdc, address x, uint256 amount) public payable {
         require(x == msg.sender, "Uknown caller");
+        require(x != address(0), "Not fundManager");
+
         require(usdc == usdcToken, "Token not allowed");
         require(
             usdcToken.balanceOf(msg.sender) >= amount,
@@ -73,43 +70,53 @@ contract Funds is MyNFT {
                 amount >= MINIMUM_INVESTMENT_AMOUNT,
                 "Minimum deposit not met"
             );
-
-            emit FundsDeposited(msg.sender, amount);
-            nft_tokenID++;
-            s_investorToNFTTokenID[x] = nft_tokenID;
-            nft.safeMint(x, nft_tokenID);
-            s_isInvestor[x] = true;
-
-            s_investmentAmount[x] += amount;
+            emit newInvestorDeposit(msg.sender, amount);
+            uint256 tokenAmount = amount / rate;
+            s_isInvestor[msg.sender] = true;
+            s_investorToGreenTokens[msg.sender] = tokenAmount;
+            s_investmentAmount[msg.sender] += amount;
             s_balances += amount;
+
             usdc.safeTransferFrom(msg.sender, address(this), amount);
+            greenTAddress.mint(x, tokenAmount);
         } else {
             //returning investor
             emit FundsDeposited(msg.sender, amount);
+            uint256 tokenAmount = amount / rate;
             s_investmentAmount[msg.sender] += amount;
             s_balances += amount;
             usdc.safeTransferFrom(msg.sender, address(this), amount);
+            greenTAddress.mint(msg.sender, tokenAmount);
         }
     }
 
     // Check if the caller owns the token
-    function _isApprovedOwner(uint256 tokenId) public view returns (bool) {
-        require(s_isInvestor[msg.sender], "Only investors can burn their nft");
+    function _isApprovedOwner(uint256 amount) public view returns (bool) {
         require(
-            s_investorToNFTTokenID[msg.sender] == tokenId,
-            "TokenID doesnt match"
+            s_isInvestor[msg.sender],
+            "Only investors can burn their tokens"
+        );
+        require(
+            s_investorToGreenTokens[msg.sender] <= amount,
+            "Insufficient balance"
         );
         return true;
     }
 
-    function burnToken(uint256 tokenId) external {
+    function burnToken(uint256 amount) external {
         // Check if the caller owns the token
         require(
-            _isApprovedOwner(tokenId) == true,
+            _isApprovedOwner(amount) == true,
             "ERC721Burnable: caller is not owner"
         );
-        emit NFTBurned(msg.sender, tokenId);
-        _burn(tokenId);
+        emit tokensBurned(msg.sender, amount);
+        uint256 tokenValue = amount * rate;
+
+        s_investmentAmount[msg.sender] -= amount;
+        s_balances -= amount;
+
+        greenTAddress.burn(amount);
+        usdcToken.safeTransfer(msg.sender, tokenValue);
     }
 
     /*@ dev Only fund managers can withdraw. Should add multisig functionality*/

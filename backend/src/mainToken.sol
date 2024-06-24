@@ -28,6 +28,10 @@ contract GreenInvest is ERC20, Ownable, ERC20Permit, ERC20Votes {
         _mint(to, amount);
     }
 
+    function burn(uint256 amount) public {
+        _burn(msg.sender, amount);
+    }
+
     function balance() public view returns (uint256) {
         return balanceOf(address(this));
     }
