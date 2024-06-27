@@ -50,6 +50,8 @@ contract CounterTest is Test {
         vm.startPrank(user1);
         usdcToken.approve(address(funds), amountDeposited);
         funds.deposit(TestUSDC(usdcToken), user1, amountDeposited);
+        funds.getBalances();
+        funds.getInvestorAmount(user1);
         vm.stopPrank();
     }
 }

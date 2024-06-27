@@ -138,7 +138,7 @@ contract Funds is ReentrancyGuard {
 
     function payInterestBasedOnInvestment(
         uint256 amount
-    ) external onlyfundManager {
+    ) external onlyfundManager nonReentrant {
         require(amount <= s_balances, "Insufficient funds");
 
         for (uint256 i = 0; i < s_investors.length; i++) {
@@ -153,6 +153,12 @@ contract Funds is ReentrancyGuard {
         }
     }
 
+    //People can withdraw investment after 2 years
+    function WithdrawInvestment(uint256 amount) external nonReentrant {
+        require(s_isInvestor[msg.sender] == true);
+        require(amount <= s_investmentAmount[msg.sender]);
+    }
+
     //@dev For receiving cash that's sent to this contract
     fallback() external payable {}
 
@@ -162,7 +168,13 @@ contract Funds is ReentrancyGuard {
         return s_isInvestor[x];
     }
 
-    function checkBalances() external view returns (uint256) {
+    function getBalances() external view returns (uint256) {
         return s_balances;
+    }
+
+    function getInvestorAmount(
+        address investor
+    ) external view returns (uint256) {
+        return s_investorToGreenTokens[investor];
     }
 }
