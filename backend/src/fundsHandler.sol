@@ -7,11 +7,12 @@ import "node_modules/@openzeppelin/contracts/access/Ownable.sol";
 
 import "node_modules/@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "node_modules/@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "node_modules/@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {GreenInvest} from "./mainToken.sol";
 
 //Minted after initial investment. Investor can burn their nft at will
 
-contract Funds {
+contract Funds is ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     event newInvestorDeposit(address indexed investor, uint256 indexed _amount);
@@ -28,7 +29,7 @@ contract Funds {
     uint256 public rate = 1000; // Number of tokens per Ether
 
     address[] public s_investors;
-    uint256 constant MINIMUM_INVESTMENT_AMOUNT = 10e18;
+    uint256 constant MINIMUM_INVESTMENT_AMOUNT = 6e18;
     mapping(address => bool) public s_isInvestor;
     mapping(address => uint256) public s_investmentAmount;
     mapping(address => uint256) public s_investorToGreenTokens;
@@ -54,7 +55,11 @@ contract Funds {
 
     /*@ dev s_investors deposit for the first time, 
     they have a minimal amount to deposit + they get some greenTokens depending on their investment amount */
-    function deposit(IERC20 usdc, address x, uint256 amount) public payable {
+    function deposit(
+        IERC20 usdc,
+        address x,
+        uint256 amount
+    ) public payable nonReentrant {
         require(x == msg.sender, "Uknown caller");
         require(x != address(0), "Not fundManager");
 
@@ -77,15 +82,18 @@ contract Funds {
             s_investmentAmount[msg.sender] += amount;
             s_balances += amount;
 
+            usdc.approve(address(this), amount);
             usdc.safeTransferFrom(msg.sender, address(this), amount);
-            greenTAddress.mint(x, tokenAmount);
+            greenTAddress.mint(msg.sender, tokenAmount);
         } else {
             //returning investor
             emit FundsDeposited(msg.sender, amount);
             uint256 tokenAmount = amount / rate;
             s_investmentAmount[msg.sender] += amount;
             s_balances += amount;
-            usdc.safeTransferFrom(msg.sender, address(this), amount);
+
+            usdc.approve(address(this), amount);
+            usdcToken.safeTransferFrom(msg.sender, address(this), amount);
             greenTAddress.mint(msg.sender, tokenAmount);
         }
     }
@@ -148,9 +156,7 @@ contract Funds {
     //@dev For receiving cash that's sent to this contract
     fallback() external payable {}
 
-    receive() external payable {
-        revert("Contract does not accept ETH");
-    }
+    receive() external payable {}
 
     function checkInvestor(address x) external view returns (bool) {
         return s_isInvestor[x];

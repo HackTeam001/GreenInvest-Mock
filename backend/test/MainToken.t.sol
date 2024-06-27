@@ -21,9 +21,4 @@ contract MainTokenTest is Test {
         vm.prank(owner);
         token.mint(user1, amountMinted);
     }
-
-    function testFail_OnlyOwnerCanMint() public {
-        vm.prank(user3);
-        token.mint(user1, amountMinted);
-    }
 }

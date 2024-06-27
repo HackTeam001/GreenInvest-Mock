@@ -4,6 +4,8 @@ pragma solidity ^0.8.20;
 import {Test, console2} from "forge-std/Test.sol";
 import {Funds} from "../src/fundsHandler.sol";
 import "../script/DeployFundHandler.s.sol";
+import {GreenInvest} from "../src/mainToken.sol";
+
 import "node_modules/@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "node_modules/@openzeppelin/contracts/access/Ownable.sol";
 
@@ -24,7 +26,7 @@ interface usdc {
 contract CounterTest is Test {
     Funds public funds;
     TestUSDC public usdcToken;
-    MyNFT public nft;
+    GreenInvest public greenToken;
 
     address public fundManager = makeAddr("123");
 
@@ -32,21 +34,22 @@ contract CounterTest is Test {
     address public user2 = makeAddr("600");
     address public usdcAdmin = makeAddr("500");
 
-    uint256 public amountDeposited = 12e18;
-    uint256 public mintAmount = 20e18;
+    uint256 public amountDeposited = 8e18;
+    uint256 public mintAmount = 30e18;
 
     function setUp() public {
         usdcToken = new TestUSDC(usdcAdmin);
 
-        nft = new MyNFT(fundManager); // Assuming MyNFT contract requires the same fund manager as Funds contract
-
-        funds = new Funds(fundManager, address(usdcToken));
+        greenToken = new GreenInvest(fundManager, 40e18);
+        funds = new Funds(fundManager, address(usdcToken), address(greenToken));
         vm.prank(usdcAdmin);
         usdcToken.mint(user1, mintAmount);
     }
 
     function test_CanDeposit() public {
-        vm.prank(user1);
+        vm.startPrank(user1);
+        usdcToken.approve(address(funds), amountDeposited);
         funds.deposit(TestUSDC(usdcToken), user1, amountDeposited);
+        vm.stopPrank();
     }
 }
