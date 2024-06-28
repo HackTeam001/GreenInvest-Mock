@@ -35,6 +35,7 @@ contract Funds is ReentrancyGuard {
     mapping(address => uint256) public s_investorToGreenTokens;
 
     uint256 public s_balances;
+    uint256 public s_returns;
 
     constructor(
         address _fundManager,
@@ -112,7 +113,8 @@ contract Funds is ReentrancyGuard {
         _;
     }
 
-    function burnToken(uint256 amount) external _isApprovedOwner(amount) {
+    //after a certain period of time
+    function burnToken(uint256 amount) public _isApprovedOwner(amount) {
         uint256 tokenValue = amount * rate;
 
         emit tokensBurned(msg.sender, amount);
@@ -121,6 +123,14 @@ contract Funds is ReentrancyGuard {
 
         greenTAddress.burn(amount);
         usdcToken.safeTransfer(msg.sender, tokenValue); //not sure
+    }
+
+    //People can withdraw investment after 2 years
+    function WithdrawInvestment(uint256 amount) external nonReentrant {
+        require(s_isInvestor[msg.sender] == true);
+        require(amount <= s_investmentAmount[msg.sender]);
+
+        burnToken(amount);
     }
 
     /*@ dev Only fund managers can withdraw. Should add multisig functionality*/
@@ -132,27 +142,23 @@ contract Funds is ReentrancyGuard {
         usdcToken.safeTransfer(msg.sender, amount);
     }
 
+    //Payments of mature investments
     function payInterestBasedOnInvestment(
-        uint256 amount
+        uint256 _returns
     ) external onlyfundManager nonReentrant {
-        require(amount <= s_balances, "Insufficient funds");
-
         for (uint256 i = 0; i < s_investors.length; i++) {
             address investor = s_investors[i];
             uint256 totalAmountInvested = s_investmentAmount[investor];
-            uint256 profit = (totalAmountInvested * amount) / s_balances;
 
-            emit ProfitDistributed(investor, profit);
-            s_balances -= profit;
-            s_investmentAmount[investor] -= profit;
+            uint256 profitPercentage = (totalAmountInvested / s_balances) * 100;
+            s_returns = _returns;
+            uint256 profit = s_returns * profitPercentage;
+
+            emit ProfitDistributed(investor, profitPercentage);
+            // s_balances -= totalAmountInvested;
+            // s_investmentAmount[investor] -= totalAmountInvested;
             usdcToken.safeTransfer(investor, profit);
         }
-    }
-
-    //People can withdraw investment after 2 years
-    function WithdrawInvestment(uint256 amount) external nonReentrant {
-        require(s_isInvestor[msg.sender] == true);
-        require(amount <= s_investmentAmount[msg.sender]);
     }
 
     //@dev For receiving cash that's sent to this contract
