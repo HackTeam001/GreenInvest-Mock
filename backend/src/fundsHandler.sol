@@ -26,7 +26,7 @@ contract Funds is ReentrancyGuard {
     IERC20 public usdcToken;
 
     GreenInvest public greenTAddress;
-    uint256 public rate = 1000; // Number of tokens per Ether
+    uint256 public rate = 2e18; // Number of tokens per Ether. 1 ether:3 green tokens
 
     address[] public s_investors;
     uint256 constant MINIMUM_INVESTMENT_AMOUNT = 6e18;
@@ -60,7 +60,7 @@ contract Funds is ReentrancyGuard {
         address x,
         uint256 amount
     ) public payable nonReentrant {
-        require(x == msg.sender, "Uknown caller");
+        require(x == msg.sender, "Unknown caller");
         require(x != address(0), "Not fundManager");
 
         require(usdc == usdcToken, "Token not allowed");
@@ -82,13 +82,14 @@ contract Funds is ReentrancyGuard {
             s_investmentAmount[msg.sender] += amount;
             s_balances += amount;
 
-            usdc.approve(address(this), amount);
+            usdc.approve(address(this), amount); //not sure
             usdc.safeTransferFrom(msg.sender, address(this), amount);
             greenTAddress.mint(msg.sender, tokenAmount);
         } else {
             //returning investor
             emit FundsDeposited(msg.sender, amount);
             uint256 tokenAmount = amount / rate;
+            s_investorToGreenTokens[msg.sender] = tokenAmount;
             s_investmentAmount[msg.sender] += amount;
             s_balances += amount;
 
@@ -99,7 +100,7 @@ contract Funds is ReentrancyGuard {
     }
 
     // Check if the caller owns the token
-    function _isApprovedOwner(uint256 amount) public view returns (bool) {
+    modifier _isApprovedOwner(uint256 amount) {
         require(
             s_isInvestor[msg.sender],
             "Only investors can burn their tokens"
@@ -108,23 +109,18 @@ contract Funds is ReentrancyGuard {
             s_investorToGreenTokens[msg.sender] <= amount,
             "Insufficient balance"
         );
-        return true;
+        _;
     }
 
-    function burnToken(uint256 amount) external {
-        // Check if the caller owns the token
-        require(
-            _isApprovedOwner(amount) == true,
-            "ERC721Burnable: caller is not owner"
-        );
-        emit tokensBurned(msg.sender, amount);
+    function burnToken(uint256 amount) external _isApprovedOwner(amount) {
         uint256 tokenValue = amount * rate;
 
+        emit tokensBurned(msg.sender, amount);
         s_investmentAmount[msg.sender] -= amount;
         s_balances -= amount;
 
         greenTAddress.burn(amount);
-        usdcToken.safeTransfer(msg.sender, tokenValue);
+        usdcToken.safeTransfer(msg.sender, tokenValue); //not sure
     }
 
     /*@ dev Only fund managers can withdraw. Should add multisig functionality*/
@@ -164,7 +160,7 @@ contract Funds is ReentrancyGuard {
 
     receive() external payable {}
 
-    function checkInvestor(address x) external view returns (bool) {
+    function getInvestor(address x) external view returns (bool) {
         return s_isInvestor[x];
     }
 
@@ -173,6 +169,12 @@ contract Funds is ReentrancyGuard {
     }
 
     function getInvestorAmount(
+        address investor
+    ) external view returns (uint256) {
+        return s_investmentAmount[investor];
+    }
+
+    function getInvestorToGreenTokens(
         address investor
     ) external view returns (uint256) {
         return s_investorToGreenTokens[investor];
