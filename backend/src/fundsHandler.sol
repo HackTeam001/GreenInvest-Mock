@@ -83,7 +83,6 @@ contract Funds is ReentrancyGuard {
             s_investmentAmount[msg.sender] += amount;
             s_balances += amount;
 
-            usdc.approve(address(this), amount); //not sure
             usdc.safeTransferFrom(msg.sender, address(this), amount);
             greenTAddress.mint(msg.sender, tokenAmount);
         } else {
@@ -94,7 +93,6 @@ contract Funds is ReentrancyGuard {
             s_investmentAmount[msg.sender] += amount;
             s_balances += amount;
 
-            usdc.approve(address(this), amount);
             usdcToken.safeTransferFrom(msg.sender, address(this), amount);
             greenTAddress.mint(msg.sender, tokenAmount);
         }

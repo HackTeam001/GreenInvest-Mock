@@ -18,11 +18,9 @@ contract FundsScript is Script {
         // uint256 privateKey = vm.envUint("DEV_PRIVATE_KEY ");
         // address account = vm.addr(privateKey);
         //_boundconsole2.log("Account:", account);
-        uint256 amount = 1e18;
 
         vm.startBroadcast();
         funds = new Funds(manager, address(usdcToken), address(greenToken));
-        funds.deposit(usdcToken, manager, amount);
         vm.stopBroadcast();
         return funds;
     }

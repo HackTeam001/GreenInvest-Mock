@@ -21,4 +21,11 @@ contract MainTokenTest is Test {
         vm.prank(owner);
         token.mint(user1, amountMinted);
     }
+
+    function testUserCanBurnTokens() public {
+        vm.prank(owner);
+        token.mint(user3, amountMinted);
+        vm.prank(user3);
+        token.burn(500000e18);
+    }
 }
