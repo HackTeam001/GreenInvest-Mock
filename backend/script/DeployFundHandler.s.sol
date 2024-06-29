@@ -10,7 +10,7 @@ import "node_modules/@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 contract FundsScript is Script {
     function setUp() public {}
 
-    function run() public {
+    function run() external returns (Funds) {
         address manager = makeAddr("123");
         IERC20 usdcToken;
         GreenInvest greenToken;
@@ -24,5 +24,6 @@ contract FundsScript is Script {
         funds = new Funds(manager, address(usdcToken), address(greenToken));
         funds.deposit(usdcToken, manager, amount);
         vm.stopBroadcast();
+        return funds;
     }
 }
