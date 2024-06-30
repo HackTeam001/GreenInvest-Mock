@@ -23,16 +23,17 @@ contract Funds is ReentrancyGuard {
     event tokensBurned(address indexed investor, uint256 indexed tokenId);
 
     address public fundManager;
-    IERC20 public usdcToken;
+    IERC20 public immutable usdcToken; //that is deposited or used for investment
 
-    GreenInvest public greenTAddress;
-    uint256 public rate = 2e18; // Number of tokens per Ether. 1 ether:3 green tokens
+    GreenInvest public immutable greenTAddress; //minted as evidence tokens you've invested. Can be redeemed
+    uint256 public constant RATE = 2e18; // Number of tokens per Ether. 1 ether:3 green tokens
+    uint256 public constant PERCENTAGEE = 100; //conversions
 
     address[] public s_investors;
-    uint256 constant MINIMUM_INVESTMENT_AMOUNT = 6e18;
     mapping(address => bool) public s_isInvestor;
     mapping(address => uint256) public s_investmentAmount;
     mapping(address => uint256) public s_investorToGreenTokens;
+    uint256 constant MINIMUM_INVESTMENT_AMOUNT = 6e18;
 
     uint256 public s_balances;
     uint256 public s_returns;
@@ -54,50 +55,6 @@ contract Funds is ReentrancyGuard {
         _;
     }
 
-    /*@ dev s_investors deposit for the first time, 
-    they have a minimal amount to deposit + they get some greenTokens depending on their investment amount */
-    function deposit(
-        IERC20 usdc,
-        address x,
-        uint256 amount
-    ) public payable nonReentrant {
-        require(x == msg.sender, "Unknown caller");
-        require(x != address(0), "Not fundManager");
-
-        require(usdc == usdcToken, "Token not allowed");
-        require(
-            usdcToken.balanceOf(msg.sender) >= amount,
-            "Insufficient balance"
-        );
-
-        //new investor
-        if (!s_isInvestor[msg.sender]) {
-            require(
-                amount >= MINIMUM_INVESTMENT_AMOUNT,
-                "Minimum deposit not met"
-            );
-            emit newInvestorDeposit(msg.sender, amount);
-            uint256 tokenAmount = amount / rate;
-            s_isInvestor[msg.sender] = true;
-            s_investorToGreenTokens[msg.sender] = tokenAmount;
-            s_investmentAmount[msg.sender] += amount;
-            s_balances += amount;
-
-            usdc.safeTransferFrom(msg.sender, address(this), amount);
-            greenTAddress.mint(msg.sender, tokenAmount);
-        } else {
-            //returning investor
-            emit FundsDeposited(msg.sender, amount);
-            uint256 tokenAmount = amount / rate;
-            s_investorToGreenTokens[msg.sender] = tokenAmount;
-            s_investmentAmount[msg.sender] += amount;
-            s_balances += amount;
-
-            usdcToken.safeTransferFrom(msg.sender, address(this), amount);
-            greenTAddress.mint(msg.sender, tokenAmount);
-        }
-    }
-
     // Check if the caller owns the token
     modifier _isApprovedOwner(uint256 amount) {
         require(
@@ -111,9 +68,46 @@ contract Funds is ReentrancyGuard {
         _;
     }
 
+    /*@ dev s_investors deposit for the first time, 
+    they have a minimal amount to deposit + they get some greenTokens depending on their investment amount */
+    function deposit(IERC20 usdc, uint256 amount) public payable nonReentrant {
+        require(msg.sender != address(0), "Not fundManager");
+
+        require(usdc == usdcToken, "Token not allowed");
+        require(usdc.balanceOf(msg.sender) >= amount, "Insufficient balance");
+
+        //new investor
+        if (!s_isInvestor[msg.sender]) {
+            require(
+                amount >= MINIMUM_INVESTMENT_AMOUNT,
+                "Minimum deposit not met"
+            );
+            emit newInvestorDeposit(msg.sender, amount);
+            uint256 tokenAmount = amount / RATE;
+            s_isInvestor[msg.sender] = true;
+            s_investorToGreenTokens[msg.sender] = tokenAmount;
+            s_investmentAmount[msg.sender] += amount;
+            s_balances += amount;
+            s_investors.push(msg.sender);
+
+            usdc.safeTransferFrom(msg.sender, address(this), amount);
+            greenTAddress.mint(msg.sender, tokenAmount);
+        } else {
+            //returning investor
+            emit FundsDeposited(msg.sender, amount);
+            uint256 tokenAmount = amount / RATE;
+            s_investorToGreenTokens[msg.sender] = tokenAmount;
+            s_investmentAmount[msg.sender] += amount;
+            s_balances += amount;
+
+            usdc.safeTransferFrom(msg.sender, address(this), amount);
+            greenTAddress.mint(msg.sender, tokenAmount);
+        }
+    }
+
     //after a certain period of time
     function burnToken(uint256 amount) public _isApprovedOwner(amount) {
-        uint256 tokenValue = amount * rate;
+        uint256 tokenValue = amount * RATE;
 
         emit tokensBurned(msg.sender, amount);
         s_investmentAmount[msg.sender] -= amount;
@@ -124,16 +118,34 @@ contract Funds is ReentrancyGuard {
     }
 
     //People can withdraw investment after 2 years
-    function WithdrawInvestment(uint256 amount) external nonReentrant {
-        require(s_isInvestor[msg.sender] == true);
-        require(amount <= s_investmentAmount[msg.sender]);
-
-        burnToken(amount);
+    function WithdrawInvestment(
+        IERC20 usdc,
+        uint256 amount,
+        uint256 numOfTokens
+    ) external nonReentrant _isApprovedOwner(amount) {
+        require(usdc == usdcToken, "Token not allowed");
+        if (s_investmentAmount[msg.sender] > 0) {
+            s_balances -= amount;
+            s_investmentAmount[msg.sender] -= amount;
+            burnToken(numOfTokens);
+            usdcToken.safeTransfer(msg.sender, amount);
+        }
+        //.. remove them as investor
+        else {
+            s_isInvestor[msg.sender] = false;
+            s_investmentAmount[msg.sender] -= amount;
+            s_balances -= amount;
+            // s_investors.pop(msg.sender); delete
+        }
     }
 
     /*@ dev Only fund managers can withdraw. Should add multisig functionality*/
-    function withdrawFunds(uint256 amount) external payable onlyfundManager {
+    function withdrawFunds(
+        IERC20 usdc,
+        uint256 amount
+    ) external payable onlyfundManager {
         require(amount <= s_balances, "Insufficient funds");
+        require(usdc == usdcToken, "Token not allowed");
 
         emit FundsWithdrawn(amount);
         s_balances -= amount;
@@ -159,16 +171,12 @@ contract Funds is ReentrancyGuard {
         }
     }
 
-    //@dev For receiving cash that's sent to this contract
-    fallback() external payable {}
-
-    receive() external payable {}
-
-    function getInvestor(address x) external view returns (bool) {
+    //@DEV GETTER FUNCTIONS. USEFUL IN TESTS
+    function getIsInvestor(address x) external view returns (bool) {
         return s_isInvestor[x];
     }
 
-    function getBalances() external view returns (uint256) {
+    function getTotalInvestorsBalance() external view returns (uint256) {
         return s_balances;
     }
 
@@ -183,4 +191,9 @@ contract Funds is ReentrancyGuard {
     ) external view returns (uint256) {
         return s_investorToGreenTokens[investor];
     }
+
+    //@dev For receiving any cash that's sent to this contract.
+    fallback() external payable {}
+
+    receive() external payable {}
 }
