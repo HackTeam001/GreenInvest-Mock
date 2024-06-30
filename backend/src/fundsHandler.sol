@@ -26,7 +26,7 @@ contract Funds is ReentrancyGuard {
     IERC20 public immutable usdcToken; //that is deposited or used for investment
 
     GreenInvest public immutable greenTAddress; //minted as evidence tokens you've invested. Can be redeemed
-    uint256 public constant RATE = 2e18; // Number of tokens per Ether. 1 ether:3 green tokens
+    uint256 public constant RATE = 1e18; // Number of tokens per Ether. 1 ether:6 green tokens
     uint256 public constant PERCENTAGEE = 100; //conversions
 
     address[] public s_investors;
@@ -117,24 +117,25 @@ contract Funds is ReentrancyGuard {
         usdcToken.safeTransfer(msg.sender, tokenValue); //not sure
     }
 
-    //People can withdraw investment after 2 years
-    function WithdrawInvestment(
+    //People can withdraw investment after 2 years (mature investment)
+    function WithdrawMatureInvestment(
         IERC20 usdc,
-        uint256 amount,
-        uint256 numOfTokens
+        uint256 amount
     ) external nonReentrant _isApprovedOwner(amount) {
         require(usdc == usdcToken, "Token not allowed");
+        uint256 valueOfTokens = amount * RATE;
+
         if (s_investmentAmount[msg.sender] > 0) {
-            s_balances -= amount;
-            s_investmentAmount[msg.sender] -= amount;
-            burnToken(numOfTokens);
-            usdcToken.safeTransfer(msg.sender, amount);
+            s_balances -= valueOfTokens;
+            s_investmentAmount[msg.sender] -= valueOfTokens;
+            burnToken(amount);
+            usdcToken.safeTransfer(msg.sender, valueOfTokens);
         }
         //.. remove them as investor
         else {
             s_isInvestor[msg.sender] = false;
-            s_investmentAmount[msg.sender] -= amount;
-            s_balances -= amount;
+            s_investmentAmount[msg.sender] -= valueOfTokens;
+            s_balances -= valueOfTokens;
             // s_investors.pop(msg.sender); delete
         }
     }
