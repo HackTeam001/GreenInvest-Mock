@@ -39,7 +39,6 @@ contract CounterTest is Test {
 
     function setUp() public {
         usdcToken = new TestUSDC(usdcAdmin);
-
         greenToken = new GreenInvest(fundManager, 40e18);
         funds = new Funds(fundManager, address(usdcToken), address(greenToken));
         vm.prank(usdcAdmin);
@@ -49,8 +48,8 @@ contract CounterTest is Test {
     function test_CanDeposit() public {
         vm.startPrank(user1);
         usdcToken.approve(address(funds), amountDeposited);
-        funds.deposit(TestUSDC(usdcToken), user1, amountDeposited);
-        funds.getBalances();
+        funds.deposit(TestUSDC(usdcToken), amountDeposited);
+        funds.getTotalInvestorsBalance();
         funds.getInvestorAmount(user1);
         vm.stopPrank();
     }

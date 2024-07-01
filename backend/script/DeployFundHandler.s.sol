@@ -8,8 +8,6 @@ import {GreenInvest} from "../src/mainToken.sol";
 import "node_modules/@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract FundsScript is Script {
-    function setUp() public {}
-
     function run() external returns (Funds) {
         address manager = makeAddr("123");
         IERC20 usdcToken;
