@@ -47,6 +47,7 @@ contract CounterTest is Test {
 
     function test_CanDeposit() public {
         vm.startPrank(user1);
+
         usdcToken.approve(address(funds), amountDeposited);
         funds.deposit(TestUSDC(usdcToken), amountDeposited);
         funds.getTotalInvestorsBalance();

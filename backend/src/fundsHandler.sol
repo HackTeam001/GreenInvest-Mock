@@ -65,6 +65,7 @@ contract Funds is ReentrancyGuard {
             s_investorToGreenTokens[msg.sender] <= amount,
             "Insufficient balance"
         );
+        require(amount > 0, "No 0 burning allowed");
         _;
     }
 
@@ -74,6 +75,7 @@ contract Funds is ReentrancyGuard {
         require(msg.sender != address(0), "Not fundManager");
 
         require(usdc == usdcToken, "Token not allowed");
+        require(amount > 0, "No 0 deposits allowed");
         require(usdc.balanceOf(msg.sender) >= amount, "Insufficient balance");
 
         //new investor
