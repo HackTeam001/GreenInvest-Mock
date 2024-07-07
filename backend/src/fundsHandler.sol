@@ -33,7 +33,7 @@ contract Funds is ReentrancyGuard {
     mapping(address => bool) public s_isInvestor;
     mapping(address => uint256) public s_investmentAmount;
     mapping(address => uint256) public s_investorToGreenTokens;
-    uint256 constant MINIMUM_INVESTMENT_AMOUNT = 6e18;
+    uint256 constant MINIMUM_INVESTMENT_AMOUNT = 10e18;
 
     uint256 public s_balances;
     uint256 public s_returns;
@@ -72,10 +72,10 @@ contract Funds is ReentrancyGuard {
     /*@ dev s_investors deposit for the first time, 
     they have a minimal amount to deposit + they get some greenTokens depending on their investment amount */
     function deposit(IERC20 usdc, uint256 amount) public payable nonReentrant {
-        require(msg.sender != address(0), "Not fundManager");
-
+        require(msg.sender != address(0), "Address 0 not allowed");
         require(usdc == usdcToken, "Token not allowed");
         require(amount > 0, "No 0 deposits allowed");
+        // require(amount >= MINIMUM_INVESTMENT_AMOUNT, "Low investment amount");
         require(usdc.balanceOf(msg.sender) >= amount, "Insufficient balance");
 
         //new investor
