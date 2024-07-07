@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "node_modules/@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import "node_modules/@openzeppelin/contracts/token/ERC721/extensions/ERC721Burnable.sol";
-import "node_modules/@openzeppelin/contracts/access/Ownable.sol";
+import "lib/openzeppelin-contracts/contracts/token/ERC721/ERC721.sol";
+import "lib/openzeppelin-contracts/contracts/token/ERC721/extensions/ERC721Burnable.sol";
+import "lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 
-import "node_modules/@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "node_modules/@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "node_modules/@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+import "lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
+import "lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 import {GreenInvest} from "./mainToken.sol";
 
 //Minted after initial investment. Investor can burn their nft at will

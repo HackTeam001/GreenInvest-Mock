@@ -5,7 +5,7 @@ import {Script, console2} from "forge-std/Script.sol";
 import {Funds} from "../src/fundsHandler.sol";
 import {GreenInvest} from "../src/mainToken.sol";
 
-import "node_modules/@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract FundsScript is Script {
     function run() external returns (Funds) {

@@ -2,12 +2,12 @@
 // Compatible with OpenZeppelin Contracts ^5.0.0
 pragma solidity ^0.8.20;
 
-import "node_modules/@openzeppelin/contracts/governance/Governor.sol";
-import "node_modules/@openzeppelin/contracts/governance/extensions/GovernorSettings.sol";
-import "node_modules/@openzeppelin/contracts/governance/extensions/GovernorCountingSimple.sol";
-import "node_modules/@openzeppelin/contracts/governance/extensions/GovernorVotes.sol";
-import "node_modules/@openzeppelin/contracts/governance/extensions/GovernorVotesQuorumFraction.sol";
-import "node_modules/@openzeppelin/contracts/governance/extensions/GovernorTimelockControl.sol";
+import "lib/openzeppelin-contracts/contracts/governance/Governor.sol";
+import "lib/openzeppelin-contracts/contracts/governance/extensions/GovernorSettings.sol";
+import "lib/openzeppelin-contracts/contracts/governance/extensions/GovernorCountingSimple.sol";
+import "lib/openzeppelin-contracts/contracts/governance/extensions/GovernorVotes.sol";
+import "lib/openzeppelin-contracts/contracts/governance/extensions/GovernorVotesQuorumFraction.sol";
+import "lib/openzeppelin-contracts/contracts/governance/extensions/GovernorTimelockControl.sol";
 
 contract MyGovernor is
     Governor,

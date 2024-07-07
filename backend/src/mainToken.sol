@@ -2,10 +2,10 @@
 // Compatible with OpenZeppelin Contracts ^5.0.0
 pragma solidity ^0.8.20;
 
-import "node_modules/@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "node_modules/@openzeppelin/contracts/access/Ownable.sol";
-import "node_modules/@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
-import "node_modules/@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
+import "lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
+import "lib/openzeppelin-contracts/contracts/access/Ownable.sol";
+import "lib/openzeppelin-contracts/contracts/token/ERC20/extensions/ERC20Permit.sol";
+import "lib/openzeppelin-contracts/contracts/token/ERC20/extensions/ERC20Votes.sol";
 
 /*@dev This is the main token that can be purchased at DEX
       Will also have an overall DAO where users (INVESTORS), can suggest updates, features, etc.

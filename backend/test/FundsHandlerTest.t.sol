@@ -6,27 +6,14 @@ import {Funds} from "../src/fundsHandler.sol";
 import "../script/DeployFundHandler.s.sol";
 import {GreenInvest} from "../src/mainToken.sol";
 
-import "node_modules/@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "node_modules/@openzeppelin/contracts/access/Ownable.sol";
-
-contract TestUSDC is ERC20, Ownable {
-    constructor(
-        address initialfundManager
-    ) ERC20("USD Coin", "USDC") Ownable(initialfundManager) {}
-
-    function mint(address to, uint256 amount) public onlyOwner {
-        _mint(to, amount);
-    }
-}
-
-interface usdc {
-    function mint(address to, uint256 amount) external;
-}
+import "lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
+import "lib/openzeppelin-contracts/contracts/access/Ownable.sol";
+import {ERC20Mock} from "lib/openzeppelin-contracts/contracts/mocks/token/ERC20Mock.sol";
 
 contract CounterTest is Test {
     Funds funds;
-    TestUSDC public usdcToken;
-    GreenInvest public greenToken;
+    ERC20Mock usdcToken;
+    GreenInvest greenToken;
 
     address public fundManager = makeAddr("123");
 
@@ -38,10 +25,10 @@ contract CounterTest is Test {
     uint256 public mintAmount = 30e18;
 
     function setUp() public {
-        usdcToken = new TestUSDC(usdcAdmin);
+        usdcToken = new ERC20Mock();
         greenToken = new GreenInvest(fundManager, 40e18);
         funds = new Funds(fundManager, address(usdcToken), address(greenToken));
-        vm.prank(usdcAdmin);
+        vm.prank(user1);
         usdcToken.mint(user1, mintAmount);
     }
 
@@ -49,7 +36,7 @@ contract CounterTest is Test {
         vm.startPrank(user1);
 
         usdcToken.approve(address(funds), amountDeposited);
-        funds.deposit(TestUSDC(usdcToken), amountDeposited);
+        funds.deposit(ERC20Mock(usdcToken), amountDeposited);
         funds.getTotalInvestorsBalance();
         funds.getInvestorAmount(user1);
         vm.stopPrank();
