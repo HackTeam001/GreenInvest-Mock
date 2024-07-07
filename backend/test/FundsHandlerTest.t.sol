@@ -24,7 +24,7 @@ interface usdc {
 }
 
 contract CounterTest is Test {
-    Funds public funds;
+    Funds funds;
     TestUSDC public usdcToken;
     GreenInvest public greenToken;
 
