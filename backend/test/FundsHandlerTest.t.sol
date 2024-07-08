@@ -45,7 +45,7 @@ contract CounterTest is Test {
         _;
     }
 
-    function test_CanDeposit() public deposit {
+    function test_NewUserCanDeposit() public deposit {
         assertEq(funds.getTotalInvestorsBalance(), amountDeposited);
         assertEq(funds.getInvestorAmount(user1), amountDeposited);
     }
@@ -76,6 +76,20 @@ contract CounterTest is Test {
         funds.deposit(ERC20Mock(usdcToken), 5e18);
     }
 
+    function testErrorZeroAmount() public {
+        vm.startPrank(user1);
+        usdcToken.approve(address(funds), 0);
+        vm.expectRevert(bytes("No 0 deposits allowed"));
+        funds.deposit(ERC20Mock(usdcToken), 0);
+    }
+
+    function testErrorInsufficientDeposit() public {
+        vm.startPrank(user1);
+        usdcToken.approve(address(funds), 40e18);
+        vm.expectRevert(bytes("Insufficient balance"));
+        funds.deposit(ERC20Mock(usdcToken), 40e18);
+    }
+
     function testReturningInvestorIsUpdated() public deposit {
         vm.startPrank(user1);
         usdcToken.approve(address(funds), 5e18);
@@ -83,5 +97,8 @@ contract CounterTest is Test {
 
         assertEq(funds.getTotalInvestorsBalance(), amountDeposited + 5e18);
         assertEq(funds.getInvestorAmount(user1), amountDeposited + 5e18);
+        assertEq(funds.getIsInvestor(user1), true);
+        //assertEq(funds.getInvestor(), user1);
+        assertEq(funds.s_investorToGreenTokens(user1), 4);
     }
 }

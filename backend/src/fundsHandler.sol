@@ -26,7 +26,7 @@ contract Funds is ReentrancyGuard {
     IERC20 public immutable usdcToken; //that is deposited or used for investment
 
     GreenInvest public immutable greenTAddress; //minted as evidence tokens you've invested. Can be redeemed
-    uint256 public constant RATE = 1e18; // Number of tokens per Ether. 1 ether:6 green tokens
+    uint256 public constant RATE = 5e18; // Number of tokens per Ether. 1 ether:2 green tokens
     uint256 public constant PERCENTAGEE = 100; //conversions
 
     address[] public s_investors;
@@ -90,7 +90,7 @@ contract Funds is ReentrancyGuard {
             s_investorToGreenTokens[msg.sender] = tokenAmount;
             s_investmentAmount[msg.sender] += amount;
             s_balances += amount;
-            s_investors.push(msg.sender);
+            s_investors.push(address(msg.sender));
 
             usdc.safeTransferFrom(msg.sender, address(this), amount);
             greenTAddress.mint(msg.sender, tokenAmount);
@@ -98,7 +98,7 @@ contract Funds is ReentrancyGuard {
             //returning investor
             emit FundsDeposited(msg.sender, amount);
             uint256 tokenAmount = amount / RATE;
-            s_investorToGreenTokens[msg.sender] = tokenAmount;
+            s_investorToGreenTokens[msg.sender] += tokenAmount;
             s_investmentAmount[msg.sender] += amount;
             s_balances += amount;
 
@@ -178,6 +178,16 @@ contract Funds is ReentrancyGuard {
     function getIsInvestor(address x) external view returns (bool) {
         return s_isInvestor[x];
     }
+
+    /*  function getInvestor() external view returns (address) {
+        uint256 length = s_investors.length;
+        uint160 y = 1;
+        for (uint160 i = y; i < length; i++) {
+            if (msg.sender == s_investors[i]) {
+                return s_investors[i];
+            }
+        }
+    } */
 
     function getTotalInvestorsBalance() external view returns (uint256) {
         return s_balances;
