@@ -50,7 +50,7 @@ contract Handler is Test {
 
     function burnTokenByUser(uint256 _amount) external {
         vm.startPrank(user);
-        funds.burnToken(_amount);
+        funds.burnToken(mock, _amount);
         vm.stopPrank();
     }
 

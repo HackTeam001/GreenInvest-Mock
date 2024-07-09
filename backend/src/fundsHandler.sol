@@ -108,7 +108,11 @@ contract Funds is ReentrancyGuard {
     }
 
     //after a certain period of time
-    function burnToken(uint256 amount) public _isApprovedOwner(amount) {
+    function burnToken(
+        IERC20 usdc,
+        uint256 amount
+    ) public _isApprovedOwner(amount) {
+        require(usdc == usdcToken, "Token not allowed");
         uint256 tokenValue = amount * RATE;
 
         s_investmentAmount[msg.sender] -= tokenValue;
@@ -128,7 +132,7 @@ contract Funds is ReentrancyGuard {
         require(usdc == usdcToken, "Token not allowed");
 
         if (s_investmentAmount[msg.sender] > 0) {
-            burnToken(amount);
+            burnToken(usdc, amount);
         }
         //.. remove them as investor
         else {

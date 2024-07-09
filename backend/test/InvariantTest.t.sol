@@ -57,8 +57,16 @@ contract CounterTest is Test {
     }
 
     function statefulFuzz_testInvariantBreaks(uint256 _amount) public {
+        console2.log(
+            "Starting statefulFuzz_testInvariantBreaks with amount:",
+            _amount
+        );
         vm.startPrank(user1);
         funds.deposit(usdcToken, _amount);
+        console2.log(
+            "Deposit completed. User balance:",
+            usdcToken.balanceOf(user1)
+        );
         vm.stopPrank();
     }
 
