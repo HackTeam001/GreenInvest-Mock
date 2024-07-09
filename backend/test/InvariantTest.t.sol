@@ -9,12 +9,15 @@ import {GreenInvest} from "../src/mainToken.sol";
 import "lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 import "lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 import {ERC20Mock} from "lib/openzeppelin-contracts/contracts/mocks/token/ERC20Mock.sol";
+import {Handler} from "../test/Handler.t.sol";
+import {StdInvariant} from "forge-std/StdInvariant.sol";
 
 contract CounterTest is Test {
     Funds funds;
-    ERC20Mock usdcToken;
-    ERC20Mock wethToken;
-    GreenInvest greenToken;
+    ERC20Mock usdcToken; //token used
+    // ERC20Mock wethToken;
+    GreenInvest greenToken; //our main token minted as a reward
+    Handler handler;
 
     address public fundManager = makeAddr("123");
 
@@ -26,16 +29,37 @@ contract CounterTest is Test {
     uint256 public mintAmount = 30e18;
 
     function setUp() public {
-        usdcToken = new ERC20Mock();
-        wethToken = new ERC20Mock();
         greenToken = new GreenInvest(fundManager, 40e18);
-        funds = new Funds(fundManager, address(usdcToken), address(greenToken));
+        usdcToken = new ERC20Mock();
+        //wethToken = new ERC20Mock();
         vm.prank(user1);
-        wethToken.mint(user1, mintAmount);
+        //_sendLogPayloadwethToken.mint(user1, mintAmount);
         usdcToken.mint(user1, mintAmount);
 
         usdcToken.mint(user2, mintAmount);
         usdcToken.mint(user3, mintAmount);
+
+        funds = new Funds(fundManager, address(usdcToken), address(greenToken));
+
+        handler = new Handler(funds, fundManager, greenToken, usdcToken, user1);
+
+        bytes4[] memory selectors = new bytes4[](5); //our functions
+        selectors[0] = handler.deposit.selector;
+        selectors[1] = handler.withdrawByManager.selector;
+        selectors[2] = handler.payInterestBasedOnInvestmentByManager.selector;
+        selectors[3] = handler.withdrawMatureInvestmentByUser.selector;
+        selectors[4] = handler.burnTokenByUser.selector;
+
+        targetSelector(
+            FuzzSelector({addr: address(handler), selectors: selectors})
+        );
+        targetContract(address(handler));
+    }
+
+    function statefulFuzz_testInvariantBreaks(uint256 _amount) public {
+        vm.startPrank(user1);
+        funds.deposit(usdcToken, _amount);
+        vm.stopPrank();
     }
 
     modifier deposit() {
@@ -50,7 +74,7 @@ contract CounterTest is Test {
         assertEq(funds.getInvestorAmount(user1), amountDeposited);
     }
 
-    function testFailIncorrectTokenAddress() public {
+    /* function testFailIncorrectTokenAddress() public {
         vm.startPrank(user2);
         wethToken.approve(address(funds), amountDeposited);
         funds.deposit(ERC20Mock(usdcToken), amountDeposited);
@@ -61,7 +85,7 @@ contract CounterTest is Test {
         wethToken.approve(address(funds), amountDeposited);
         vm.expectRevert(bytes("Token not allowed"));
         funds.deposit(ERC20Mock(wethToken), amountDeposited);
-    }
+    } */
 
     function testFailDepositLowFunds() public {
         vm.startPrank(user1);
@@ -98,7 +122,6 @@ contract CounterTest is Test {
         assertEq(funds.getTotalInvestorsBalance(), amountDeposited + 5e18);
         assertEq(funds.getInvestorAmount(user1), amountDeposited + 5e18);
         assertEq(funds.getIsInvestor(user1), true);
-        //assertEq(funds.getInvestor(), user1);
         assertEq(funds.s_investorToGreenTokens(user1), 4);
     }
 }

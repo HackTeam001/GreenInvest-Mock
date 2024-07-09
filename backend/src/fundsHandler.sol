@@ -36,7 +36,7 @@ contract Funds is ReentrancyGuard {
     uint256 constant MINIMUM_INVESTMENT_AMOUNT = 10e18;
 
     uint256 public s_balances;
-    uint256 public s_returns;
+    uint256 public s_returns; //added to the contract
 
     constructor(
         address _fundManager,
@@ -62,7 +62,7 @@ contract Funds is ReentrancyGuard {
             "Only investors can burn their tokens"
         );
         require(
-            s_investorToGreenTokens[msg.sender] <= amount,
+            s_investorToGreenTokens[msg.sender] >= amount,
             "Insufficient balance"
         );
         require(amount > 0, "No 0 burning allowed");
@@ -111,12 +111,13 @@ contract Funds is ReentrancyGuard {
     function burnToken(uint256 amount) public _isApprovedOwner(amount) {
         uint256 tokenValue = amount * RATE;
 
+        s_investmentAmount[msg.sender] -= tokenValue;
+        s_balances -= tokenValue;
+        s_investorToGreenTokens[msg.sender] -= amount;
         emit tokensBurned(msg.sender, amount);
-        s_investmentAmount[msg.sender] -= amount;
-        s_balances -= amount;
 
         greenTAddress.burn(amount);
-        usdcToken.safeTransfer(msg.sender, tokenValue); //not sure
+        usdcToken.safeTransferFrom(address(this), msg.sender, tokenValue); //not sure
     }
 
     //People can withdraw investment after 2 years (mature investment)
@@ -125,51 +126,54 @@ contract Funds is ReentrancyGuard {
         uint256 amount
     ) external nonReentrant _isApprovedOwner(amount) {
         require(usdc == usdcToken, "Token not allowed");
-        uint256 valueOfTokens = amount * RATE;
 
         if (s_investmentAmount[msg.sender] > 0) {
-            s_balances -= valueOfTokens;
-            s_investmentAmount[msg.sender] -= valueOfTokens;
             burnToken(amount);
-            usdcToken.safeTransfer(msg.sender, valueOfTokens);
         }
         //.. remove them as investor
         else {
-            s_isInvestor[msg.sender] = false;
-            s_investmentAmount[msg.sender] -= valueOfTokens;
-            s_balances -= valueOfTokens;
-            // s_investors.pop(msg.sender); delete
+            if (s_investmentAmount[msg.sender] == 0) {
+                s_isInvestor[msg.sender] = false;
+                // Efficiently remove investor from the array
+                for (uint i = 0; i < s_investors.length; i++) {
+                    if (s_investors[i] == msg.sender) {
+                        s_investors[i] = s_investors[s_investors.length - 1];
+                        s_investors.pop();
+                        break;
+                    }
+                }
+            }
         }
     }
 
     /*@ dev Only fund managers can withdraw. Should add multisig functionality*/
-    function withdrawFunds(
-        IERC20 usdc,
-        uint256 amount
-    ) external payable onlyfundManager {
-        require(amount <= s_balances, "Insufficient funds");
+    function withdrawFunds(IERC20 usdc) external payable onlyfundManager {
+        require(msg.value <= s_balances, "Insufficient funds");
         require(usdc == usdcToken, "Token not allowed");
 
-        emit FundsWithdrawn(amount);
-        s_balances -= amount;
-        usdcToken.safeTransfer(msg.sender, amount);
+        s_balances -= msg.value;
+        emit FundsWithdrawn(msg.value);
+
+        usdcToken.safeTransfer(msg.sender, msg.value);
     }
 
     //Payments of mature investments
     function payInterestBasedOnInvestment(
         uint256 _returns
     ) external onlyfundManager nonReentrant {
-        for (uint256 i = 0; i < s_investors.length; i++) {
+        uint256 length = s_investors.length;
+        for (uint256 i = 0; i < length; i++) {
             address investor = s_investors[i];
             uint256 totalAmountInvested = s_investmentAmount[investor];
 
             uint256 profitPercentage = (totalAmountInvested / s_balances) * 100;
             s_returns = _returns;
             uint256 profit = s_returns * profitPercentage;
-
+            s_returns -= profit;
             emit ProfitDistributed(investor, profitPercentage);
             // s_balances -= totalAmountInvested;
             // s_investmentAmount[investor] -= totalAmountInvested;
+
             usdcToken.safeTransfer(investor, profit);
         }
     }
@@ -178,16 +182,6 @@ contract Funds is ReentrancyGuard {
     function getIsInvestor(address x) external view returns (bool) {
         return s_isInvestor[x];
     }
-
-    /*  function getInvestor() external view returns (address) {
-        uint256 length = s_investors.length;
-        uint160 y = 1;
-        for (uint160 i = y; i < length; i++) {
-            if (msg.sender == s_investors[i]) {
-                return s_investors[i];
-            }
-        }
-    } */
 
     function getTotalInvestorsBalance() external view returns (uint256) {
         return s_balances;
