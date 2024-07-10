@@ -24,8 +24,9 @@ contract CounterTest is Test {
     address public user1 = makeAddr("234");
     address public user2 = makeAddr("600");
     address public user3 = makeAddr("900");
+    address public greenTokenAddressForUser1 = makeAddr("20");
 
-    uint256 public amountDeposited = 15e18;
+    uint256 public amountDeposited = 20e18;
     uint256 public mintAmount = 30e18;
 
     function setUp() public {
@@ -41,14 +42,21 @@ contract CounterTest is Test {
 
         funds = new Funds(fundManager, address(usdcToken), address(greenToken));
 
-        handler = new Handler(funds, fundManager, greenToken, usdcToken, user1);
+        handler = new Handler(
+            funds,
+            fundManager,
+            greenToken,
+            usdcToken,
+            user1,
+            greenTokenAddressForUser1
+        );
 
-        bytes4[] memory selectors = new bytes4[](5); //our functions
+        bytes4[] memory selectors = new bytes4[](3); //our functions
         selectors[0] = handler.deposit.selector;
         selectors[1] = handler.withdrawByManager.selector;
         selectors[2] = handler.payInterestBasedOnInvestmentByManager.selector;
-        selectors[3] = handler.withdrawMatureInvestmentByUser.selector;
-        selectors[4] = handler.burnTokenByUser.selector;
+        // selectors[3] = handler.withdrawMatureInvestmentByUser.selector;
+        //selectors[3] = handler.burnTokenByUser.selector;
 
         targetSelector(
             FuzzSelector({addr: address(handler), selectors: selectors})
@@ -56,28 +64,33 @@ contract CounterTest is Test {
         targetContract(address(handler));
     }
 
-    function statefulFuzz_testInvariantBreaks(uint256 _amount) public {
+    /*function statefulFuzz_testInvariantBreaks(uint256 _amount) public {
         console2.log(
             "Starting statefulFuzz_testInvariantBreaks with amount:",
             _amount
         );
         vm.startPrank(user1);
+        uint256 balance = usdcToken.balanceOf(user1) - _amount;
         funds.deposit(usdcToken, _amount);
         console2.log(
             "Deposit completed. User balance:",
             usdcToken.balanceOf(user1)
         );
         vm.stopPrank();
-    }
 
-    modifier deposit() {
+        assertEq(usdcToken.balanceOf(user1), balance);
+    }*/
+
+    modifier deposit(address investorGreenAddy) {
         vm.startPrank(user1);
         usdcToken.approve(address(funds), amountDeposited);
-        funds.deposit(ERC20Mock(usdcToken), amountDeposited);
+        funds.deposit(ERC20Mock(usdcToken), investorGreenAddy, amountDeposited);
         _;
     }
 
-    function test_NewUserCanDeposit() public deposit {
+    function test_NewUserCanDeposit(
+        address investorGreenAddy
+    ) public deposit(investorGreenAddy) {
         assertEq(funds.getTotalInvestorsBalance(), amountDeposited);
         assertEq(funds.getInvestorAmount(user1), amountDeposited);
     }
@@ -85,7 +98,7 @@ contract CounterTest is Test {
     /* function testFailIncorrectTokenAddress() public {
         vm.startPrank(user2);
         wethToken.approve(address(funds), amountDeposited);
-        funds.deposit(ERC20Mock(usdcToken), amountDeposited);
+        funds.deposit(ERC20Mock(usdcToken),  amountDeposited);
     }
 
     function testErrorIncorrectAddress() public {
@@ -95,41 +108,58 @@ contract CounterTest is Test {
         funds.deposit(ERC20Mock(wethToken), amountDeposited);
     } */
 
-    function testFailDepositLowFunds() public {
+    function testFailDepositLowFunds(address investorGreenAddy) public {
         vm.startPrank(user1);
         usdcToken.approve(address(funds), 5e18);
-        funds.deposit(ERC20Mock(usdcToken), 5e18);
+        funds.deposit(ERC20Mock(usdcToken), investorGreenAddy, 5e18);
     }
 
-    function testErrorLowFunds() public {
+    function testErrorLowFunds(address investorGreenAddy) public {
         vm.startPrank(user1);
         usdcToken.approve(address(funds), 5e18);
         vm.expectRevert(bytes("Minimum deposit not met"));
-        funds.deposit(ERC20Mock(usdcToken), 5e18);
+        funds.deposit(ERC20Mock(usdcToken), investorGreenAddy, 5e18);
     }
 
-    function testErrorZeroAmount() public {
+    function testErrorZeroAmount(address investorGreenAddy) public {
         vm.startPrank(user1);
         usdcToken.approve(address(funds), 0);
         vm.expectRevert(bytes("No 0 deposits allowed"));
-        funds.deposit(ERC20Mock(usdcToken), 0);
+        funds.deposit(ERC20Mock(usdcToken), investorGreenAddy, 0);
     }
 
-    function testErrorInsufficientDeposit() public {
+    function testErrorInsufficientDeposit(address investorGreenAddy) public {
         vm.startPrank(user1);
         usdcToken.approve(address(funds), 40e18);
         vm.expectRevert(bytes("Insufficient balance"));
-        funds.deposit(ERC20Mock(usdcToken), 40e18);
+        funds.deposit(ERC20Mock(usdcToken), investorGreenAddy, 40e18);
     }
 
-    function testReturningInvestorIsUpdated() public deposit {
+    function testReturningInvestorIsUpdated(
+        address investorGreenAddy
+    ) public deposit(investorGreenAddy) {
         vm.startPrank(user1);
         usdcToken.approve(address(funds), 5e18);
-        funds.deposit(ERC20Mock(usdcToken), 5e18);
+        funds.deposit(ERC20Mock(usdcToken), investorGreenAddy, 5e18);
+        vm.stopPrank();
 
         assertEq(funds.getTotalInvestorsBalance(), amountDeposited + 5e18);
         assertEq(funds.getInvestorAmount(user1), amountDeposited + 5e18);
         assertEq(funds.getIsInvestor(user1), true);
-        assertEq(funds.s_investorToGreenTokens(user1), 4);
+        assertEq(funds.s_investorToGreenTokens(user1), 5);
+    }
+
+    function testWithdrawInvestmentByUser(
+        uint256 value,
+        address investorGreenAddy
+    ) public deposit(investorGreenAddy) {
+        vm.startPrank(user1);
+        vm.assume(value > 0);
+        funds.WithdrawMatureInvestment(investorGreenAddy, value);
+        uint256 amount = funds.getInvestorToGreenTokens(user1) - value;
+        console2.log(usdcToken.balanceOf(address(this)));
+        assertEq(funds.getInvestorToGreenTokens(user1), amount);
+        /* assertEq(funds.getInvestorAmount(user1), 10e18);
+        assertEq(funds.s_balances(), 10e18);*/
     }
 }

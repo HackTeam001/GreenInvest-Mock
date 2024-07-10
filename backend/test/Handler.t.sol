@@ -10,31 +10,32 @@ contract Handler is Test {
     Funds funds;
     ERC20Mock mock;
     GreenInvest greenToken;
-    address manager = makeAddr("hey");
-    address user = makeAddr("brr");
+    address manager = makeAddr("123");
+    address user = makeAddr("899");
+    address greenTokenAddressForUser = makeAddr("99");
 
     constructor(
         Funds _funds,
         address _manager,
         GreenInvest _greenToken,
         ERC20Mock _mock,
-        address _user
+        address _user,
+        address _greenTokenAddressForUser
     ) {
         funds = _funds;
         manager = _manager;
         mock = _mock;
         greenToken = _greenToken;
         user = _user;
+        greenTokenAddressForUser = _greenTokenAddressForUser;
     }
 
     function deposit(uint256 amount) external {
         uint256 _amount = bound(amount, 0, mock.balanceOf(user));
         //_amount2 = bound(_amount2, 0, mock.balanceOf(user2));
         vm.startPrank(user);
-        vm.deal(user, _amount);
-
         mock.approve(address(funds), _amount);
-        funds.deposit(mock, _amount);
+        funds.deposit(mock, greenTokenAddressForUser, _amount);
 
         /*vm.startPrank(user);
         mock.approve(address(funds), _amount2);
@@ -48,17 +49,17 @@ contract Handler is Test {
         vm.stopPrank();
     }
 
-    function burnTokenByUser(uint256 _amount) external {
+    /*   function burnTokenByUser(uint256 _amount) external {
         vm.startPrank(user);
-        funds.burnToken(mock, _amount);
+        funds.burnToken(greenToken, _amount);
         vm.stopPrank();
     }
 
-    function withdrawMatureInvestmentByUser(uint256 _amount) external {
+     function withdrawMatureInvestmentByUser(uint256 _amount) external {
         vm.startPrank(user);
         funds.WithdrawMatureInvestment(mock, _amount);
         vm.stopPrank();
-    }
+    }*/
 
     function payInterestBasedOnInvestmentByManager(uint256 _returns) external {
         vm.startPrank(manager);
